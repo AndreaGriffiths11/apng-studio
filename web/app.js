@@ -66,7 +66,7 @@ function renderPreview() {
     const has = state.frames.length > 0;
     empty.hidden = has;
     if (has) {
-        img.src = `/preview.apng?n=${assetNonce}`;
+        img.src = `/preview.png?n=${assetNonce}`;
         img.hidden = false;
         img.classList.toggle("pixelated", Math.max(state.width, state.height) < 96);
     } else {
@@ -324,11 +324,11 @@ $("btn-export").addEventListener("click", async () => {
     }
 });
 $("btn-download").addEventListener("click", async () => {
-    const res = await fetch(`/preview.apng?n=${nonce()}`);
+    const res = await fetch(`/preview.png?n=${nonce()}`);
     const blob = await res.blob();
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = (state.name || "animation").replace(/[^\w.-]+/g, "_") + ".apng";
+    a.download = (state.name || "animation").replace(/[^\w.-]+/g, "_") + ".png";
     document.body.appendChild(a);
     a.click();
     a.remove();

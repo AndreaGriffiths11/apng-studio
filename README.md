@@ -1,6 +1,6 @@
 # APNG Studio
 
-An interactive [GitHub Copilot CLI](https://github.com/github/copilot-cli) **canvas extension** for building [Animated PNG (APNG)](https://wiki.mozilla.org/APNG_Specification) files from frames — draw or upload frames, tune the full practical APNG spec surface, preview live, and export an `.apng`.
+An interactive [GitHub Copilot CLI](https://github.com/github/copilot-cli) **canvas extension** for building [Animated PNG (APNG)](https://wiki.mozilla.org/APNG_Specification) files from frames — draw or upload frames, tune the full practical APNG spec surface, preview live, and export an animated `.png`.
 
 The canvas renders in a side panel; the agent can also drive it through callable actions.
 
@@ -18,8 +18,8 @@ Built together by [Andrea Griffiths](https://github.com/AndreaGriffiths11) and [
 - **Apply to all** — set every frame's delay (ms), snap to an exact frame rate (fps), or apply dispose + blend in one click.
 - **Loop count** — `0` = infinite, or a fixed number of plays.
 - **Hidden first frame** — mark frame 1 as a static fallback: shown by non‑APNG viewers, excluded from the animation loop (encoded as a default image with no leading `fcTL`, `num_frames = N‑1`).
-- **Live preview** — a real `/preview.apng` is assembled on every change; a **Reload** button re‑syncs state and rebuilds the preview.
-- **Export** — writes a valid `.apng` to disk and returns its path.
+- **Live preview** — a real animated PNG is assembled on every change and served from `/preview.png`; a **Reload** button re‑syncs state and rebuilds the preview.
+- **Export** — writes a valid animated `.png` (APNG) to disk and returns its path. The `.png` extension keeps the file byte‑compatible with every PNG viewer: APNG‑aware ones (browsers, macOS Quick Look) animate it, others show the first frame as a static fallback.
 
 ## Install
 
@@ -76,13 +76,13 @@ The extension exposes these callable actions on the `apng-studio` canvas:
 | `add_color_frame` | Append a solid‑color frame; accepts `delayNum`/`delayDen`/`disposeOp`/`blendOp`.                         |
 | `set_frame`       | Update one frame (`frameId`) or all (`all: true`): timing via `delayMs`/`fps`/`delayNum`+`delayDen`, plus `disposeOp`/`blendOp`. |
 | `clear_frames`    | Remove every frame.                                                                                      |
-| `export`          | Assemble and write the `.apng` to disk; returns the absolute path.                                       |
+| `export`          | Assemble and write the animated `.png` (APNG) to disk; returns the absolute path.                        |
 
 All actions accept an optional `projectId` to target a specific animation.
 
 ## How it works
 
-- **`extension.mjs`** — one loopback HTTP server per open canvas instance serves the renderer, JSON state, per‑frame PNGs, the live `/preview.apng`, and mutation endpoints. Server‑Sent Events (`/events`) push a `changed` signal so every open panel and the preview stay in sync.
+- **`extension.mjs`** — one loopback HTTP server per open canvas instance serves the renderer, JSON state, per‑frame PNGs, the live `/preview.png`, and mutation endpoints. Server‑Sent Events (`/events`) push a `changed` signal so every open panel and the preview stay in sync.
 - **`apng.mjs`** — assembles the APNG chunk stream (`IHDR` / `acTL` / `fcTL` / `IDAT` / `fdAT` / `IEND`) with contiguous sequence numbers, plus a minimal RGBA→PNG encoder.
 - **`web/`** — the iframe UI. It talks to its server over plain HTTP; there is no privileged host bridge.
 

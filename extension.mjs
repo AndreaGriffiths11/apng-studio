@@ -6,7 +6,7 @@
 //     they survive extension reloads and are shared between the interactive
 //     iframe UI and the agent-callable actions.
 //   • One loopback HTTP server per open canvas instance serves the renderer
-//     (web/), JSON state, per-frame PNGs, a live `/preview.apng`, and mutation
+//     (web/), JSON state, per-frame PNGs, a live `/preview.png`, and mutation
 //     endpoints. Server-Sent Events push "changed" so every open panel and the
 //     preview stay in sync.
 //   • APNG assembly + a small RGBA→PNG encoder live in ./apng.mjs.
@@ -244,10 +244,10 @@ async function exportApng(id, filename) {
     const meta = await loadProject(id);
     await ensureDir(EXPORTS_DIR);
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const base = filename ? sanitizeName(filename.replace(/\.apng$/i, "")) : `${sanitizeName(meta.name)}-${stamp}`;
-    const outPath = join(EXPORTS_DIR, `${base}.apng`);
+    const base = filename ? sanitizeName(filename.replace(/\.(a?png)$/i, "")) : `${sanitizeName(meta.name)}-${stamp}`;
+    const outPath = join(EXPORTS_DIR, `${base}.png`);
     await fs.writeFile(outPath, bytes);
-    return { path: outPath, name: `${base}.apng`, bytes: bytes.length };
+    return { path: outPath, name: `${base}.png`, bytes: bytes.length };
 }
 
 // ---- colors (for agent-generated frames) --------------------------------
@@ -379,11 +379,12 @@ async function handleRequest(projectId, req, res) {
             }
         }
 
-        // Live-assembled APNG preview.
-        if (method === "GET" && path === "/preview.apng") {
+        // Live-assembled APNG preview (served as image/png — APNG is byte-compatible
+        // with PNG, so browsers animate it and default viewers still open it).
+        if (method === "GET" && path === "/preview.png") {
             const bytes = await assemble(projectId);
-            if (!bytes) return send(res, 204, "image/apng", "");
-            return send(res, 200, "image/apng", Buffer.from(bytes));
+            if (!bytes) return send(res, 204, "image/png", "");
+            return send(res, 200, "image/png", Buffer.from(bytes));
         }
 
         // Add a frame (raw PNG body).
@@ -459,7 +460,7 @@ session = await joinSession({
             id: "apng-studio",
             displayName: "APNG Studio",
             description:
-                "Build an Animated PNG (APNG) from frames: upload or draw frames, set per-frame delays and loop count, preview live, and export an .apng file.",
+                "Build an Animated PNG (APNG) from frames: upload or draw frames, set per-frame delays and loop count, preview live, and export an animated .png file.",
             inputSchema: openInputSchema,
             actions: [
                 {
@@ -580,7 +581,7 @@ session = await joinSession({
                 },
                 {
                     name: "export",
-                    description: "Assemble the frames into an .apng file on disk and return its absolute path.",
+                    description: "Assemble the frames into an animated .png (APNG) file on disk and return its absolute path.",
                     inputSchema: {
                         type: "object",
                         properties: {
