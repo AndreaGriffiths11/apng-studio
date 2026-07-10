@@ -275,9 +275,9 @@ function iconBtn(label, title, disabled, onClick, danger) {
 }
 
 // ---- settings handlers --------------------------------------------------
-$("in-loops").addEventListener("change", async () => {
+async function commitLoops() {
     await api("/settings", { loops: parseInt($("in-loops").value, 10) || 0 });
-});
+}
 async function commitDim() {
     if (state.frames.length > 0) return;
     const w = parseInt($("in-width").value, 10);
@@ -285,8 +285,25 @@ async function commitDim() {
     const { w: cw, h: ch } = clampSize(w || state.width, h || state.height);
     await api("/settings", { width: cw, height: ch });
 }
-$("in-width").addEventListener("change", commitDim);
-$("in-height").addEventListener("change", commitDim);
+function debounce(fn, ms) {
+    let t = null;
+    return () => {
+        clearTimeout(t);
+        t = setTimeout(fn, ms);
+    };
+}
+// Commit on `input` (fires for stepper buttons and arrow keys in every engine,
+// including the host WebKit view where `change` is unreliable for steppers) as
+// well as `change` (final blur/Enter). The `input` path is debounced so holding
+// an arrow or typing a value doesn't spam the server.
+const commitDimSoon = debounce(commitDim, 300);
+const commitLoopsSoon = debounce(commitLoops, 300);
+for (const id of ["in-width", "in-height"]) {
+    $(id).addEventListener("input", commitDimSoon);
+    $(id).addEventListener("change", commitDim);
+}
+$("in-loops").addEventListener("input", commitLoopsSoon);
+$("in-loops").addEventListener("change", commitLoops);
 $("in-hidden-first").addEventListener("change", async (e) => {
     await api("/settings", { hiddenFirst: e.target.checked });
 });
