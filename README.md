@@ -4,6 +4,12 @@ An interactive [GitHub Copilot CLI](https://github.com/github/copilot-cli) **can
 
 The canvas renders in a side panel; the agent can also drive it through callable actions.
 
+## Background
+
+APNG Studio started as a hallway conversation. During a demo shift at the WeAreDevelopers Congress I got talking with [Jeff](https://github.com/GekkeBoyJeff) about APNG (animated PNG) versus GIF: APNG keeps real alpha and full color where GIF can't. We wanted an easy way to actually build one, so we made this small canvas wrapper for creating APNGs.
+
+Built together by [Andrea Griffiths](https://github.com/AndreaGriffiths11) and [Jeff](https://github.com/GekkeBoyJeff).
+
 ## Features
 
 - **Frames** — upload images or draw them on a built‑in canvas (pen/eraser, fill, onion‑skin, "start from last frame"). Reorder, duplicate, and delete frames.
@@ -23,7 +29,7 @@ Ask Copilot to install it straight from this repo folder:
 
 ```
 Install the canvas extension at
-https://github.com/octobooth-1/apng-studio
+https://github.com/AndreaGriffiths11/apng-studio
 ```
 
 …or use the `install_extension` tool / command palette with this repository URL. Choose the scope you want:

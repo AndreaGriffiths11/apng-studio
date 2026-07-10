@@ -261,6 +261,7 @@ function iconBtn(label, title, disabled, onClick, danger) {
     b.className = "icon-btn" + (danger ? " danger" : "");
     b.textContent = label;
     b.title = title;
+    b.setAttribute("aria-label", title);
     b.disabled = !!disabled;
     b.addEventListener("click", async () => {
         try {
@@ -294,7 +295,7 @@ $("btn-delay-all").addEventListener("click", async () => {
     toast(`All delays set to ${ms} ms`);
 });
 $("btn-fps").addEventListener("click", async () => {
-    const fps = Math.max(1, Math.min(1000, parseInt($("in-fps").value, 10) || 12));
+    const fps = Math.max(1, Math.min(120, parseInt($("in-fps").value, 10) || 12));
     await api("/frames/props-all", { fps });
     toast(`All frames set to ${fps} fps`);
 });
@@ -333,7 +334,12 @@ $("btn-download").addEventListener("click", async () => {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 });
-$("btn-restart").addEventListener("click", renderPreview);
+$("btn-restart").addEventListener("click", () => {
+    // Re-assigning an identical src is a no-op, so bump the nonce to force a
+    // fresh fetch and restart the animation from the first frame.
+    assetNonce = nonce();
+    renderPreview();
+});
 
 // ---- upload -------------------------------------------------------------
 $("btn-upload").addEventListener("click", () => $("file-input").click());
