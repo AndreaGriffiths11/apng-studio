@@ -86,6 +86,7 @@ function renderMeta() {
     $("btn-export").disabled = busy;
     $("btn-download").disabled = busy;
     $("btn-restart").disabled = busy;
+    $("btn-share").disabled = busy;
 }
 
 function renderSettings() {
@@ -340,6 +341,63 @@ $("btn-restart").addEventListener("click", () => {
     assetNonce = nonce();
     renderPreview();
 });
+
+// ---- send to phone ------------------------------------------------------
+let shareCountdown = null;
+
+$("btn-share").addEventListener("click", async () => {
+    const btn = $("btn-share");
+    btn.disabled = true;
+    try {
+        const info = await api("/share/start", {});
+        openSharePanel(info);
+    } catch (e) {
+        toast("Couldn't start sharing: " + e.message);
+    } finally {
+        btn.disabled = state.frames.length === 0;
+    }
+});
+
+$("btn-share-stop").addEventListener("click", stopSharing);
+
+function openSharePanel(info) {
+    $("share-panel").hidden = false;
+    // Cache-bust the QR so a new token's code is fetched each time.
+    $("share-qr-img").src = `/share/qr.png?ts=${Date.now()}`;
+    const link = $("share-url");
+    link.href = info.url;
+    link.textContent = info.url.replace(/^https?:\/\//, "");
+    startShareCountdown(info.expiresAt);
+}
+
+function startShareCountdown(expiresAt) {
+    clearInterval(shareCountdown);
+    const tick = () => {
+        const ms = expiresAt - Date.now();
+        if (ms <= 0) {
+            clearInterval(shareCountdown);
+            $("share-panel").hidden = true;
+            toast("Phone link expired");
+            api("/share/stop", {}).catch(() => {});
+            return;
+        }
+        const m = Math.floor(ms / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        $("share-expiry").textContent = `Expires in ${m}:${String(s).padStart(2, "0")}`;
+    };
+    tick();
+    shareCountdown = setInterval(tick, 1000);
+}
+
+async function stopSharing() {
+    clearInterval(shareCountdown);
+    $("share-panel").hidden = true;
+    try {
+        await api("/share/stop", {});
+    } catch (_) {
+        /* server may have already expired the share */
+    }
+}
 
 // ---- upload -------------------------------------------------------------
 $("btn-upload").addEventListener("click", () => $("file-input").click());

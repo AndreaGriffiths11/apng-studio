@@ -231,6 +231,57 @@ h1 {
     background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
 
+/* Send to phone */
+.share-panel {
+    display: flex;
+    gap: var(--gap);
+    align-items: center;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card-bg);
+}
+.share-qr {
+    flex-shrink: 0;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    line-height: 0;
+}
+.share-qr img {
+    width: 132px;
+    height: 132px;
+    image-rendering: pixelated;
+    display: block;
+}
+.share-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.share-title {
+    font-weight: var(--font-weight-semibold, 600);
+}
+.share-url {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-code-inline, 12px);
+    color: var(--accent);
+    word-break: break-all;
+    text-decoration: none;
+    margin-top: 2px;
+}
+.share-url:hover {
+    text-decoration: underline;
+}
+.share-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+}
+
 /* Settings */
 .settings-grid {
     display: grid;

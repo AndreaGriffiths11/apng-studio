@@ -19,6 +19,7 @@ Built together by [Andrea Griffiths](https://github.com/AndreaGriffiths11) and [
 - **Loop count** — `0` = infinite, or a fixed number of plays.
 - **Hidden first frame** — mark frame 1 as a static fallback: shown by non‑APNG viewers, excluded from the animation loop (encoded as a default image with no leading `fcTL`, `num_frames = N‑1`).
 - **Live preview** — a real animated PNG is assembled on every change and served from `/preview.png`; a **Reload** button re‑syncs state and rebuilds the preview.
+- **Send to phone** — a **Send to phone** button opens a QR code; scan it with your phone camera (same Wi‑Fi) to open the live animation in your phone's browser and save it. Served read‑only from a short‑lived, token‑gated LAN endpoint that shuts itself down after 10 minutes.
 - **Export** — writes a valid animated `.png` (APNG) to disk and returns its path. The `.png` extension keeps the file byte‑compatible with every PNG viewer: APNG‑aware ones (browsers, macOS Quick Look) animate it, others show the first frame as a static fallback.
 
 ## Install
@@ -46,6 +47,7 @@ Copy the source files into one of the extension directories above, keeping the l
 apng-studio/
 ├── extension.mjs      # entry point (required name)
 ├── apng.mjs           # APNG codec + RGBA→PNG encoder
+├── qr.mjs             # dependency-free QR encoder (Send to phone)
 └── web/               # canvas iframe renderer
     ├── index.html
     ├── app.js
@@ -82,8 +84,9 @@ All actions accept an optional `projectId` to target a specific animation.
 
 ## How it works
 
-- **`extension.mjs`** — one loopback HTTP server per open canvas instance serves the renderer, JSON state, per‑frame PNGs, the live `/preview.png`, and mutation endpoints. Server‑Sent Events (`/events`) push a `changed` signal so every open panel and the preview stay in sync.
+- **`extension.mjs`** — one loopback HTTP server per open canvas instance serves the renderer, JSON state, per‑frame PNGs, the live `/preview.png`, and mutation endpoints. Server‑Sent Events (`/events`) push a `changed` signal so every open panel and the preview stay in sync. **Send to phone** spins up a separate, read‑only LAN server that serves only a landing page and the preview image, gated by a short‑lived random token and torn down on expiry.
 - **`apng.mjs`** — assembles the APNG chunk stream (`IHDR` / `acTL` / `fcTL` / `IDAT` / `fdAT` / `IEND`) with contiguous sequence numbers, plus a minimal RGBA→PNG encoder.
+- **`qr.mjs`** — a small, dependency‑free QR encoder (byte mode, error‑correction level M) used to render the **Send to phone** code. The QR is drawn into a PNG with the `apng.mjs` encoder.
 - **`web/`** — the iframe UI. It talks to its server over plain HTTP; there is no privileged host bridge.
 
 ## License

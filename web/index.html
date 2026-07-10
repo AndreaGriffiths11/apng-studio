@@ -40,9 +40,26 @@
         <div class="row gap">
             <button class="btn btn-primary" id="btn-export">Export .png</button>
             <button class="btn" id="btn-download">Download</button>
+            <button class="btn" id="btn-share">Send to phone</button>
             <button class="btn btn-ghost" id="btn-restart" title="Restart animation">↺ Replay</button>
         </div>
         <p class="saved-path muted" id="saved-path" hidden></p>
+
+        <!-- Send to phone -->
+        <div class="share-panel" id="share-panel" hidden>
+            <div class="share-qr checker">
+                <img id="share-qr-img" alt="QR code — scan with your phone camera to open the animation" />
+            </div>
+            <div class="share-body">
+                <div class="share-title">Scan with your phone camera</div>
+                <p class="muted tiny">Your phone must be on the same Wi‑Fi as this computer.</p>
+                <a class="share-url" id="share-url" href="#" target="_blank" rel="noopener"></a>
+                <div class="share-foot">
+                    <span class="muted tiny" id="share-expiry"></span>
+                    <button class="btn btn-sm btn-ghost" id="btn-share-stop">Stop</button>
+                </div>
+            </div>
+        </div>
     </section>
 
     <!-- Settings -->
