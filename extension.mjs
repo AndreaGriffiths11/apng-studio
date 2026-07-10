@@ -15,9 +15,12 @@ import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import { join, extname } from "node:path";
 import { promises as fs } from "node:fs";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { networkInterfaces } from "node:os";
 
 import { joinSession, createCanvas, CanvasError } from "@github/copilot-sdk/extension";
-import { assembleApng, solidColorPng } from "./apng.mjs";
+import { assembleApng, solidColorPng, encodeRgbaPng } from "./apng.mjs";
+import { encodeQr } from "./qr.mjs";
 
 const EXT_DIR = fileURLToPath(new URL(".", import.meta.url));
 const WEB_DIR = join(EXT_DIR, "web");
@@ -429,6 +432,27 @@ async function handleRequest(projectId, req, res) {
             }
         }
 
+        // ---- "Send to phone" control plane (loopback only) --------------
+        if (method === "POST" && path === "/share/start") {
+            try {
+                const info = await startShare(projectId);
+                return send(res, 200, "application/json", JSON.stringify(info));
+            } catch (err) {
+                const status = err instanceof CanvasError ? 400 : 500;
+                return send(res, status, "text/plain", err.message || "Could not start sharing.");
+            }
+        }
+        if (method === "POST" && path === "/share/stop") {
+            stopShare();
+            return send(res, 200, "application/json", "{}");
+        }
+        if (method === "GET" && path === "/share/qr.png") {
+            if (!share || Date.now() > share.expiresAt) {
+                return send(res, 409, "text/plain", "no active share");
+            }
+            return send(res, 200, "image/png", Buffer.from(renderQrPng(shareLandingUrl())));
+        }
+
         return send(res, 404, "text/plain", "not found");
     } catch (err) {
         return send(res, 500, "text/plain", String(err && err.message ? err.message : err));
@@ -442,6 +466,152 @@ async function startServer(entry) {
     entry.server = server;
     entry.url = `http://127.0.0.1:${port}/`;
     return entry;
+}
+
+// ---- "Send to phone" share server ---------------------------------------
+// A separate, read-only HTTP server bound to the LAN so a phone can fetch the
+// live animation. It exposes ONLY a landing page and the preview image, gated
+// by a short-lived random token, and it shuts itself down when the token
+// expires. Mutation endpoints stay on the loopback server and are never
+// reachable from the network.
+const SHARE_TTL_MS = 10 * 60 * 1000;
+let share = null; // { server, ip, port, token, projectId, expiresAt, timer }
+
+// Prefer an RFC1918 private address; skip CGNAT/VPN ranges (e.g. Tailscale
+// 100.64/10) unless nothing else is available.
+function lanIPv4() {
+    const candidates = [];
+    for (const addrs of Object.values(networkInterfaces())) {
+        for (const a of addrs || []) {
+            if (a.family === "IPv4" && !a.internal) candidates.push(a.address);
+        }
+    }
+    const isPrivate = (ip) =>
+        /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
+    return candidates.find(isPrivate) || candidates[0] || null;
+}
+
+function shareLandingUrl() {
+    return `http://${share.ip}:${share.port}/s?t=${share.token}`;
+}
+
+function tokenValid(token) {
+    if (!share || typeof token !== "string" || token.length !== share.token.length) return false;
+    try {
+        return timingSafeEqual(Buffer.from(token), Buffer.from(share.token));
+    } catch {
+        return false;
+    }
+}
+
+function shareLandingHtml(token) {
+    const src = `/s/preview.png?t=${encodeURIComponent(token)}`;
+    // Self-contained page: no external assets, checkerboard behind the image.
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APNG Studio</title>
+<style>
+:root { color-scheme: light dark; }
+body { margin:0; min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:20px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:#0d1117; color:#e6edf3; padding:24px; box-sizing:border-box; }
+h1 { font-size:17px; font-weight:600; margin:0; }
+.frame { padding:14px; border-radius:12px;
+  background-color:#fff;
+  background-image:linear-gradient(45deg,#d9dbe0 25%,transparent 25%),linear-gradient(-45deg,#d9dbe0 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d9dbe0 75%),linear-gradient(-45deg,transparent 75%,#d9dbe0 75%);
+  background-size:16px 16px; background-position:0 0,0 8px,8px -8px,-8px 0; }
+img { display:block; max-width:min(88vw,480px); height:auto; image-rendering:auto; }
+a { color:#4493f8; font-size:14px; text-decoration:none; }
+p { margin:0; font-size:13px; opacity:.7; }
+</style></head><body>
+<h1>APNG Studio</h1>
+<div class="frame"><img src="${src}" alt="Animated PNG preview" /></div>
+<a href="${src}" download="animation.png">Save to your device</a>
+<p>Tap and hold the image to save it. This link expires shortly.</p>
+</body></html>`;
+}
+
+async function shareRequest(req, res) {
+    try {
+        const url = new URL(req.url, "http://localhost");
+        const token = url.searchParams.get("t") || "";
+        if (!tokenValid(token)) return send(res, 403, "text/plain", "Invalid or expired link.");
+        if (Date.now() > share.expiresAt) {
+            stopShare();
+            return send(res, 410, "text/plain", "This link has expired.");
+        }
+        if (req.method === "GET" && (url.pathname === "/s" || url.pathname === "/s/")) {
+            return send(res, 200, CONTENT_TYPES[".html"], shareLandingHtml(token));
+        }
+        if (req.method === "GET" && url.pathname === "/s/preview.png") {
+            const bytes = await assemble(share.projectId);
+            if (!bytes) return send(res, 204, "image/png", "");
+            return send(res, 200, "image/png", Buffer.from(bytes));
+        }
+        return send(res, 404, "text/plain", "not found");
+    } catch (err) {
+        return send(res, 500, "text/plain", String(err && err.message ? err.message : err));
+    }
+}
+
+async function startShare(projectId) {
+    const ip = lanIPv4();
+    if (!ip) {
+        throw new CanvasError(
+            "no_network",
+            "No local network address found. Connect to Wi-Fi to share to your phone."
+        );
+    }
+    if (!share) {
+        const server = createServer(shareRequest);
+        await new Promise((resolve, reject) => {
+            server.once("error", reject);
+            server.listen(0, "0.0.0.0", resolve);
+        });
+        share = { server, port: server.address().port };
+    }
+    share.ip = ip;
+    share.projectId = projectId;
+    share.token = randomBytes(16).toString("hex");
+    share.expiresAt = Date.now() + SHARE_TTL_MS;
+    if (share.timer) clearTimeout(share.timer);
+    share.timer = setTimeout(stopShare, SHARE_TTL_MS);
+    share.timer.unref?.();
+    return { url: shareLandingUrl(), expiresAt: share.expiresAt, ttlMs: SHARE_TTL_MS };
+}
+
+function stopShare() {
+    if (!share) return;
+    if (share.timer) clearTimeout(share.timer);
+    const server = share.server;
+    share = null;
+    try {
+        server.close();
+    } catch {
+        /* already closing */
+    }
+}
+
+// Render a QR matrix into a scannable PNG using the RGBA->PNG encoder.
+function renderQrPng(text, scale = 8, quiet = 4) {
+    const { matrix, size } = encodeQr(text);
+    const dim = (size + quiet * 2) * scale;
+    const rgba = new Uint8Array(dim * dim * 4).fill(255);
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            if (!matrix[r][c]) continue;
+            for (let y = 0; y < scale; y++) {
+                for (let x = 0; x < scale; x++) {
+                    const o = (((r + quiet) * scale + y) * dim + ((c + quiet) * scale + x)) * 4;
+                    rgba[o] = 0;
+                    rgba[o + 1] = 0;
+                    rgba[o + 2] = 0;
+                    rgba[o + 3] = 255;
+                }
+            }
+        }
+    }
+    return encodeRgbaPng(dim, dim, rgba);
 }
 
 // ---- canvas declaration -------------------------------------------------
@@ -621,6 +791,9 @@ session = await joinSession({
             onClose: async (ctx) => {
                 const entry = servers.get(ctx.instanceId);
                 if (entry) {
+                    // Tear down any LAN share that belongs to this project so the
+                    // network-facing server never outlives its canvas.
+                    if (share && share.projectId === entry.projectId) stopShare();
                     servers.delete(ctx.instanceId);
                     await new Promise((resolve) => entry.server.close(() => resolve()));
                 }
