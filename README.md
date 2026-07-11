@@ -1,14 +1,12 @@
 # APNG Studio
 
-An interactive [GitHub Copilot CLI](https://github.com/github/copilot-cli) **canvas extension** for building [Animated PNG (APNG)](https://wiki.mozilla.org/APNG_Specification) files from frames — draw or upload frames, tune the full practical APNG spec surface, preview live, and export an animated `.png`.
+An interactive [GitHub Copilot app](https://github.com/features/ai/github-app) **canvas extension** for building [Animated PNG (APNG)](https://wiki.mozilla.org/APNG_Specification) files from frames — draw or upload frames, tune the full practical APNG spec surface, preview live, and export an animated `.png`.
 
 The canvas renders in a side panel; the agent can also drive it through callable actions.
 
 ## Background
 
 APNG Studio started as a hallway conversation. During a demo shift at the WeAreDevelopers Congress I got talking with [Jeff](https://github.com/GekkeBoyJeff) about APNG (animated PNG) versus GIF: APNG keeps real alpha and full color where GIF can't. We wanted an easy way to actually build one, so we made this small canvas wrapper for creating APNGs.
-
-Built together by [Andrea Griffiths](https://github.com/AndreaGriffiths11) and [Jeff](https://github.com/GekkeBoyJeff).
 
 ## Features
 
