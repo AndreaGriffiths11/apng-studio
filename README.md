@@ -5,9 +5,9 @@ An interactive [GitHub Copilot app](https://github.com/features/ai/github-app) *
 The canvas renders in a side panel; the agent can also drive it through callable actions.
 
 <p align="center">
-  <img src="assets/demo.png" alt="An animated PNG of a smooth full-color orb, made with APNG Studio" width="300" />
+  <img src="assets/demo.png" alt="An animated walkthrough of the APNG Studio canvas building an animation from frames" width="640" />
 </p>
-<p align="center"><em>An actual APNG built with APNG Studio — smooth full color and alpha, in a file every PNG viewer can open.</em></p>
+<p align="center"><em>APNG Studio in action — an animated PNG built with the canvas itself.</em></p>
 
 ## Background
 
