@@ -27,7 +27,7 @@ APNG Studio started as a hallway conversation. During a demo shift at the WeAreD
 
 ## Install
 
-### From Copilot CLI (recommended)
+### From the GitHub Copilot app (recommended)
 
 Ask Copilot to install it straight from this repo folder:
 
@@ -57,7 +57,7 @@ apng-studio/
     └── styles.css
 ```
 
-Then reload extensions. The `@github/copilot-sdk` import is resolved by the CLI — **do not** add a `package.json` or `node_modules` for it.
+Then reload extensions. The `@github/copilot-sdk` import is resolved by the GitHub Copilot app — **do not** add a `package.json` or `node_modules` for it.
 
 ## Open the canvas
 
