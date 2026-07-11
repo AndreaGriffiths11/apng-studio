@@ -4,6 +4,11 @@ An interactive [GitHub Copilot app](https://github.com/features/ai/github-app) *
 
 The canvas renders in a side panel; the agent can also drive it through callable actions.
 
+<p align="center">
+  <img src="assets/demo.png" alt="An animated PNG of a smooth full-color orb, made with APNG Studio" width="300" />
+</p>
+<p align="center"><em>An actual APNG built with APNG Studio — smooth full color and alpha, in a file every PNG viewer can open.</em></p>
+
 ## Background
 
 APNG Studio started as a hallway conversation. During a demo shift at the WeAreDevelopers Congress I got talking with [Jeff](https://github.com/GekkeBoyJeff) about APNG (animated PNG) versus GIF: APNG keeps real alpha and full color where GIF can't. We wanted an easy way to actually build one, so we made this small canvas wrapper for creating APNGs.
